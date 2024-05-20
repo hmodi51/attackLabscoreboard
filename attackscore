@@ -1,0 +1,64 @@
+#!/usr/bin/python3
+
+
+# hmodi5
+
+import re
+import requests
+import sys
+
+if len(sys.argv) > 1:
+    target_number = sys.argv[1]
+else:
+    target_number = None
+
+
+url = 'http://systems3.cs.uic.edu:15513/scoreboard'
+#print("test1")
+response = requests.get(url)
+#print(response)
+html_content = response.text
+pattern = re.compile(r'<tr.*?>\s*'
+                     r'<td align=right>(\d+)</td>\s*'  # Rank
+                     r'<td align=right>(\d+)</td>\s*'  # Target
+                     r'<td align=center>(.*?)</td>\s*'  # Date
+                     r'<td align=right>(\d+(?:\.\d+)?|<font.*?>.*?</font>)</td>\s*'   # Score
+                     r'<td align=right>(\d+(?:\.\d+)?|<font.*?>.*?</font>)</td>\s*'   # Phase 1
+                     r'<td align=right>(\d+(?:\.\d+)?|<font.*?>.*?</font>)</td>\s*'   # Phase 2
+                     r'<td align=right>(\d+(?:\.\d+)?|<font.*?>.*?</font>)</td>\s*'   # Phase 3
+                     r'<td align=right>(\d+(?:\.\d+)?|<font.*?>.*?</font>)</td>\s*'   # Phase 4
+                     r'<td align=right>(\d+(?:\.\d+)?|<font.*?>.*?</font>)</td>\s*'   # Phase 5
+                     r'</tr>', re.DOTALL | re.IGNORECASE)
+
+
+def clean_data(text):
+
+    clean_text = re.sub(r'<.*?>', '', text)
+
+    clean_text = re.sub(r'\s+', ' ', clean_text)
+
+    clean_text = clean_text.strip()
+    return clean_text
+
+
+
+matches = pattern.findall(html_content)
+
+headers = ["#", "Target", "Date", "Score", "Phase 1", "Phase 2", "Phase 3", "Phase 4", "Phase 5"]
+
+
+if target_number:
+    matches = [m for m in matches if m[1] == target_number]
+
+all_rows = [headers] + matches
+column_widths = [max(len(clean_data(str(row[i]))) for row in all_rows) for i in range(len(headers))]
+
+row_format = " ".join("{:<" + str(width) + "}" for width in column_widths)
+
+
+print(row_format.format(*headers))
+
+
+for match in matches:
+    cleaned_match = [clean_data(str(m)) for m in match]
+    print(row_format.format(*cleaned_match))
